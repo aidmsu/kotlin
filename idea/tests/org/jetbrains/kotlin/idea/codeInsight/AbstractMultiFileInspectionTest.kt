@@ -43,10 +43,11 @@ abstract class AbstractMultiFileInspectionTest : KotlinMultiFileTestCase() {
         doTest({ _, _ ->
                    try {
                        if (withRuntime) {
+                           val sdk = PluginTestCaseBase.jdk(testRootDisposable) { if (withFullJdk) PluginTestCaseBase.fullJdk() else PluginTestCaseBase.mockJdk() }
                            project.allModules().forEach { module ->
                                ConfigLibraryUtil.configureKotlinRuntimeAndSdk(
                                        module,
-                                       if (withFullJdk) PluginTestCaseBase.fullJdk() else PluginTestCaseBase.mockJdk()
+                                       sdk
                                )
                            }
                        }

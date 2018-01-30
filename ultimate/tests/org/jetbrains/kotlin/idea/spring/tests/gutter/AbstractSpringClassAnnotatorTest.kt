@@ -57,6 +57,7 @@ abstract class AbstractSpringClassAnnotatorTest : KotlinLightCodeInsightFixtureT
 
         val withRuntime = config["withRuntime"]?.asBoolean ?: false
         if (withRuntime) {
+            PluginTestCaseBase.jdk(testRootDisposable) { PluginTestCaseBase.mockJdk() }
             ConfigLibraryUtil.configureKotlinRuntimeAndSdk(myModule, PluginTestCaseBase.mockJdk())
         }
 
