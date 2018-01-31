@@ -40,9 +40,11 @@ import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.containers.ContainerUtilRt;
+import kotlin.Unit;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.kotlin.test.testFramework.EdtTestUtilKt;
 
 import java.io.IOException;
 import java.util.*;
@@ -69,6 +71,10 @@ public abstract class ExternalSystemImportingTestCase extends ExternalSystemTest
 
   protected void importProject() {
     doImportProject();
+    EdtTestUtilKt.runInEdtAndWait(() -> {
+      //UIUtil.dispatchAllInvocationEvents();
+      return Unit.INSTANCE;
+    });
   }
 
   private void doImportProject() {

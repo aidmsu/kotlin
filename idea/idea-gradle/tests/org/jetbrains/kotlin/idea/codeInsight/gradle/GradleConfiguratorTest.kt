@@ -125,14 +125,17 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
     @Test
     fun testConfigureGSK() {
         createProjectSubFile("settings.gradle", "include ':app'")
-        val file = createProjectSubFile("app/build.gradle.kts", """
-        buildscript {
-            repositories {
-                jcenter()
-                mavenCentral()
-            }
-        }
-        """.trimIndent())
+        val file = createProjectSubFile(
+            "app/build.gradle.kts",
+            """
+                buildscript {
+                    repositories {
+                        jcenter()
+                        mavenCentral()
+                    }
+                }
+            """.trimIndent()
+        )
 
         importProject()
 
@@ -145,7 +148,8 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
 
                 FileDocumentManager.getInstance().saveAllDocuments()
                 val content = LoadTextUtil.loadText(file).toString()
-                assertEquals("""
+                assertEquals(
+                    """
                     import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
                     val kotlin_version: String by extra
@@ -157,27 +161,28 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
                             mavenCentral()
                         }
                         dependencies {
-                            classpath(kotlinModule("gradle-plugin", kotlin_version))
+                            classpath(kotlin("gradle-plugin", kotlin_version))
                         }
+                    }
+                    plugins {
+                        kotlin("jvm")
                     }
                     apply {
                         plugin("kotlin")
                     }
                     dependencies {
-                        compile(kotlinModule("stdlib-jre8", kotlin_version))
+                        compile(kotlin("stdlib-jre8", kotlin_version))
                     }
                     repositories {
                         mavenCentral()
                     }
-                    val compileKotlin: KotlinCompile by tasks
-                    compileKotlin.kotlinOptions {
-                        jvmTarget = "1.8"
+                    tasks.withType<KotlinCompile> {
+                        kotlinOptions {
+                            jvmTarget = "1.8"
+                        }
                     }
-                    val compileTestKotlin: KotlinCompile by tasks
-                    compileTestKotlin.kotlinOptions {
-                        jvmTarget = "1.8"
-                    }
-                """.trimIndent(), content)
+                    """.trimIndent(), content
+                )
             }
         }
     }
@@ -277,13 +282,23 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
 
     @Test
     fun testAddNonKotlinLibraryGSK() {
-        val buildScript = createProjectSubFile("build.gradle.kts",
-                                  """
-                                                     |dependencies {
-                                                     |    testCompile("junit:junit:4.12")
-                                                     |    compile(kotlinModule("stdlib-jre8"))
-                                                     |}
-                                                     |""".trimMargin("|"))
+        val buildScript = createProjectSubFile(
+            "build.gradle.kts",
+            """
+                repositories {
+                    mavenCentral()
+                }
+
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+
+                dependencies {
+                    testCompile("junit:junit:4.12")
+                    compile(kotlin("stdlib-jre8"))
+                }
+            """.trimIndent()
+        )
 
         importProject()
 
@@ -301,26 +316,50 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
         }
 
         assertEquals(
-                """
-                 |dependencies {
-                 |    testCompile("junit:junit:4.12")
-                 |    compile(kotlinModule("stdlib-jre8"))
-                 |    compile("org.a.b:lib:1.0.0")
-                 |}
-                 |""".trimMargin("|"),
-                LoadTextUtil.loadText(buildScript).toString())
+            """
+                repositories {
+                    mavenCentral()
+                }
+
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+
+                dependencies {
+                    testCompile("junit:junit:4.12")
+                    compile(kotlin("stdlib-jre8"))
+                    compile("org.a.b:lib:1.0.0")
+                }
+            """.trimIndent(),
+            LoadTextUtil.loadText(buildScript).toString()
+        )
     }
 
     @Test
     fun testAddLibraryGSK_WithKotlinVersion() {
-        val buildScript = createProjectSubFile("build.gradle.kts",
-                                                    """
-                                                     |val kotlin_version: String by extra
-                                                     |dependencies {
-                                                     |    testCompile("junit:junit:4.12")
-                                                     |    compile(kotlinModule("stdlib-jre8", kotlin_version))
-                                                     |}
-                                                     |""".trimMargin("|"))
+        val buildScript = createProjectSubFile(
+            "build.gradle.kts",
+            """
+                buildscript {
+                    var kotlin_version: String by extra
+                    kotlin_version = "1.1.2"
+                }
+
+                repositories {
+                    mavenCentral()
+                }
+
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+
+                val kotlin_version: String by extra
+                dependencies {
+                    testCompile("junit:junit:4.12")
+                    compile(kotlin("stdlib-jre8", kotlin_version))
+                }
+            """.trimIndent()
+        )
 
         importProject()
 
@@ -339,25 +378,49 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
         }
 
         assertEquals(
-                """
-                 |val kotlin_version: String by extra
-                 |dependencies {
-                 |    testCompile("junit:junit:4.12")
-                 |    compile(kotlinModule("stdlib-jre8", kotlin_version))
-                 |    compile(kotlinModule("reflect", kotlin_version))
-                 |}
-                 |""".trimMargin("|"),
-                LoadTextUtil.loadText(buildScript).toString())
+            """
+                buildscript {
+                    var kotlin_version: String by extra
+                    kotlin_version = "1.1.2"
+                }
+
+                repositories {
+                    mavenCentral()
+                }
+
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+
+                val kotlin_version: String by extra
+                dependencies {
+                    testCompile("junit:junit:4.12")
+                    compile(kotlin("stdlib-jre8", kotlin_version))
+                    compile(kotlin("reflect", kotlin_version))
+                }
+            """.trimIndent(),
+            LoadTextUtil.loadText(buildScript).toString()
+        )
     }
 
     @Test
     fun testAddTestLibraryGSK() {
-        val buildScript = createProjectSubFile("build.gradle.kts",
-                                                    """
-                                                     |dependencies {
-                                                     |    compile(kotlinModule("stdlib-jre8"))
-                                                     |}
-                                                     |""".trimMargin("|"))
+        val buildScript = createProjectSubFile(
+            "build.gradle.kts",
+            """
+                repositories {
+                    mavenCentral()
+                }
+
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+
+                dependencies {
+                    compile(kotlin("stdlib-jre8"))
+                }
+            """.trimIndent()
+        )
 
         importProject()
 
@@ -382,25 +445,44 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
         }
 
         assertEquals(
-                """
-                 |dependencies {
-                 |    compile(kotlinModule("stdlib-jre8"))
-                 |    testCompile("junit:junit:4.12")
-                 |    testCompile(kotlinModule("test", "1.1.2"))
-                 |}
-                 |""".trimMargin("|"),
-                LoadTextUtil.loadText(buildScript).toString())
+            """
+                repositories {
+                    mavenCentral()
+                }
+
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+
+                dependencies {
+                    compile(kotlin("stdlib-jre8"))
+                    testCompile("junit:junit:4.12")
+                    testCompile(kotlin("test", "1.1.2"))
+                }
+            """.trimIndent(),
+            LoadTextUtil.loadText(buildScript).toString()
+        )
     }
 
     @Test
     fun testAddLibraryGSK() {
-        val buildScript = createProjectSubFile("build.gradle.kts",
-                                                    """
-                                                     |dependencies {
-                                                     |    testCompile("junit:junit:4.12")
-                                                     |    compile(kotlinModule("stdlib-jre8"))
-                                                     |}
-                                                     |""".trimMargin("|"))
+        val buildScript = createProjectSubFile(
+            "build.gradle.kts",
+            """
+                repositories {
+                    mavenCentral()
+                }
+
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+
+                dependencies {
+                    testCompile("junit:junit:4.12")
+                    compile(kotlin("stdlib-jre8"))
+                }
+            """.trimIndent()
+        )
 
         importProject()
 
@@ -418,14 +500,23 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
         }
 
         assertEquals(
-                """
-                 |dependencies {
-                 |    testCompile("junit:junit:4.12")
-                 |    compile(kotlinModule("stdlib-jre8"))
-                 |    compile(kotlinModule("reflect", "1.0.0"))
-                 |}
-                 |""".trimMargin("|"),
-                LoadTextUtil.loadText(buildScript).toString())
+            """
+                repositories {
+                    mavenCentral()
+                }
+
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+
+                dependencies {
+                    testCompile("junit:junit:4.12")
+                    compile(kotlin("stdlib-jre8"))
+                    compile(kotlin("reflect", "1.0.0"))
+                }
+            """.trimIndent(),
+            LoadTextUtil.loadText(buildScript).toString()
+        )
     }
 
     @Test
@@ -485,7 +576,14 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
 
     @Test
     fun testAddCoroutinesSupportGSK() {
-        val buildScript = createProjectSubFile("build.gradle.kts", "")
+        val buildScript = createProjectSubFile(
+            "build.gradle.kts",
+            """
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+            """.trimIndent()
+        )
 
         importProject()
 
@@ -498,12 +596,18 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
         }
 
         assertEquals(
-                """import org.jetbrains.kotlin.gradle.dsl.Coroutines
-                  |
-                  |kotlin {
-                  |    experimental.coroutines = Coroutines.ENABLE
-                  |}""".trimMargin("|"),
-                LoadTextUtil.loadText(buildScript).toString())
+            """
+                import org.jetbrains.kotlin.gradle.dsl.Coroutines
+
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+                kotlin {
+                    experimental.coroutines = Coroutines.ENABLE
+                }
+            """.trimIndent(),
+            LoadTextUtil.loadText(buildScript).toString()
+        )
     }
 
     @Test
@@ -567,13 +671,20 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
 
     @Test
     fun testChangeCoroutinesSupportGSK() {
-        val buildScript = createProjectSubFile("build.gradle.kts",
-                                                    """import org.jetbrains.kotlin.gradle.dsl.Coroutines
-                  |
-                  |kotlin {
-                  |    experimental.coroutines = Coroutines.DISABLE
-                  |}
-                  |""".trimMargin("|"))
+        val buildScript = createProjectSubFile(
+            "build.gradle.kts",
+            """
+                import org.jetbrains.kotlin.gradle.dsl.Coroutines
+
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+
+                kotlin {
+                    experimental.coroutines = Coroutines.DEFAULT
+                }
+            """.trimIndent()
+        )
 
         importProject()
 
@@ -586,13 +697,19 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
         }
 
         assertEquals(
-                """import org.jetbrains.kotlin.gradle.dsl.Coroutines
-                  |
-                  |kotlin {
-                  |    experimental.coroutines = Coroutines.ENABLE
-                  |}
-                  |""".trimMargin("|"),
-                LoadTextUtil.loadText(buildScript).toString())
+            """
+                import org.jetbrains.kotlin.gradle.dsl.Coroutines
+
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+
+                kotlin {
+                    experimental.coroutines = Coroutines.ENABLE
+                }
+            """.trimIndent(),
+            LoadTextUtil.loadText(buildScript).toString()
+        )
     }
 
     @Test
@@ -651,7 +768,14 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
 
     @Test
     fun testAddLanguageVersionGSK() {
-        val buildScript = createProjectSubFile("build.gradle.kts", "")
+        val buildScript = createProjectSubFile(
+            "build.gradle.kts",
+            """
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+            """.trimIndent()
+        )
 
         importProject()
 
@@ -664,13 +788,20 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
         }
 
         assertEquals(
-                """import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-                 |
-                 |val compileKotlin: KotlinCompile by tasks
-                 |compileKotlin.kotlinOptions {
-                 |    languageVersion = "1.1"
-                 |}""".trimMargin("|"),
-                LoadTextUtil.loadText(buildScript).toString())
+            """
+                import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+                tasks.withType<KotlinCompile> {
+                    kotlinOptions {
+                        languageVersion = "1.1"
+                    }
+                }
+            """.trimIndent(),
+            LoadTextUtil.loadText(buildScript).toString()
+        )
     }
 
     @Test
@@ -734,12 +865,22 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
 
     @Test
     fun testChangeLanguageVersionGSK() {
-        val buildScript = createProjectSubFile("build.gradle.kts",
-                                                    """val compileKotlin: KotlinCompile by tasks
-                                                     |compileKotlin.kotlinOptions {
-                                                     |   languageVersion = "1.0"
-                                                     |}
-                                                     |""".trimMargin("|"))
+        val buildScript = createProjectSubFile(
+            "build.gradle.kts",
+            """
+                import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+
+                tasks.withType<KotlinCompile> {
+                    kotlinOptions {
+                        languageVersion = "1.0"
+                    }
+                }
+            """.trimIndent()
+        )
 
         importProject()
 
@@ -752,12 +893,21 @@ class GradleConfiguratorTest : GradleImportingTestCase() {
         }
 
         assertEquals(
-                """val compileKotlin: KotlinCompile by tasks
-                 |compileKotlin.kotlinOptions {
-                 |    languageVersion = "1.1"
-                 |}
-                 |""".trimMargin("|"),
-                LoadTextUtil.loadText(buildScript).toString())
+            """
+                import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+                plugins {
+                    kotlin("jvm") version "1.1.2"
+                }
+
+                tasks.withType<KotlinCompile> {
+                    kotlinOptions {
+                        languageVersion = "1.1"
+                    }
+                }
+            """.trimIndent(),
+            LoadTextUtil.loadText(buildScript).toString()
+        )
     }
 
     @Test
