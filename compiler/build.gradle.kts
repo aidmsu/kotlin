@@ -9,6 +9,14 @@ jvmTarget = "1.6"
 val compilerModules: Array<String> by rootProject.extra
 val otherCompilerModules = compilerModules.filter { it != path }
 
+allprojects {
+    tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<*>> {
+        kotlinOptions {
+            freeCompilerArgs = freeCompilerArgs + listOf("-Xeffect-system")
+        }
+    }
+}
+
 val depDistProjects = listOf(
         ":kotlin-script-runtime",
         ":kotlin-stdlib",
